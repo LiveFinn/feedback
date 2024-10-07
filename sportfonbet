@@ -1,0 +1,44 @@
+import requests
+import csv
+import time
+
+def get_sports_data():
+    url = "https://line31w.bk6bba-resources.com/events/list?lang=en&version=0&scopeMarket=1600"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        # Фильтрация по 'kind' == 'sport'
+        sports = [item for item in data.get('sports', []) if item.get('kind') == 'sport']
+        return [(sport['id'], sport['name']) for sport in sports]
+    else:
+        print("Ошибка запроса:", response.status_code)
+        return []
+
+def update_csv(file_path, new_data):
+    existing_data = set()
+    # Чтение существующих данных из CSV
+    try:
+        with open(file_path, mode='r', newline='', encoding='utf-8') as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                existing_data.add((row[1], row[0]))  # Добавление (name, id) в множество
+    except FileNotFoundError:
+        pass  # Если файл не существует, просто пропустим
+
+    # Запись новых данных в CSV
+    with open(file_path, mode='a', newline='', encoding='utf-8') as csvfile:
+        writer = csv.writer(csvfile)
+        for id, name in new_data:
+            if (name, id) not in existing_data:
+                writer.writerow([id, name])  # Записываем только уникальные значения
+
+def main():
+    file_path = 'sports_data.csv'
+    while True:
+        new_data = get_sports_data()
+        if new_data:
+            update_csv(file_path, new_data)
+        time.sleep(300)  # Ожидание 5 минут
+
+if __name__ == "__main__":
+    main()
